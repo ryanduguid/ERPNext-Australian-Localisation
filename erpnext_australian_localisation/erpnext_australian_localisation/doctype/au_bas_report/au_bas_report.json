@@ -467,7 +467,6 @@
       "fieldtype": "Select",
       "label": "GST Accounting Basis",
       "options": "\nNon-cash\nCash",
-      "reqd": 1,
       "description": "Confirm the GST accounting basis for this period. This generator supports non-cash attribution only."
     },
     {
