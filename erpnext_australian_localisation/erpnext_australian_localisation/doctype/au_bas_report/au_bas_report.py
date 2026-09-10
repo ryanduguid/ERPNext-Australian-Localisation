@@ -11,6 +11,9 @@ from frappe.model.document import Document
 
 class AUBASReport(Document):
 	def before_submit(self):
+		validate_reporting_scope(self)
+		if self.get("bas_currency") != "AUD":
+			frappe.throw(_("Regenerate this BAS report using verified AUD amounts before submitting it."))
 		if self.reporting_status != "Validated":
 			frappe.throw(_("Only BAS Report at Validated state can be submitted"))
 
@@ -32,12 +35,28 @@ class AUBASReport(Document):
 				frappe.throw(_("BAS Report found for this period"))
 
 
+def validate_reporting_scope(doc):
+	if doc.get("accounting_basis") != "Non-cash":
+		frappe.throw(
+			_(
+				"This BAS generator supports the non-cash GST accounting basis only. Confirm the basis before generating or submitting a report."
+			)
+		)
+	if frappe.db.get_value("Company", doc.company, "default_currency") != "AUD":
+		frappe.throw(
+			_(
+				"BAS generation requires an AUD company currency. A foreign-currency ledger needs a separate AUD attribution calculation."
+			)
+		)
+
+
 @frappe.whitelist()
 def get_gst(name):
 	"""
 	Update the BAS Report G labels based on the reporting method
 	"""
 	doc = frappe.get_doc("AU BAS Report", name)
+	validate_reporting_scope(doc)
 	doc.bas_updation_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 	frappe.publish_realtime("bas_data_generator", user=frappe.session.user)
@@ -49,6 +68,7 @@ def get_gst(name):
 		update_simpler_bas_report(doc)
 
 	doc.net_gst = abs(doc.get("1a") - doc.get("1b"))
+	doc.bas_currency = "AUD"
 	doc.save()
 
 
@@ -82,6 +102,12 @@ def update_full_bas_report(doc):
 			pluck="name",
 		)
 		for bas_entry in bas_entries:
+			if frappe.db.get_value("AU BAS Entry", bas_entry, "currency") != "AUD":
+				frappe.throw(
+					_(
+						"BAS entry {0} has no verified AUD basis. Reconcile and regenerate its source entries before reporting."
+					).format(bas_entry)
+				)
 			bas_report_entry = get_mapped_doc(
 				"AU BAS Entry",
 				bas_entry,
@@ -223,20 +249,16 @@ def get_gl_entries_for_accounts(start_date, end_date, company, accounts, calcula
 			"voucher_type",
 			"voucher_no",
 			"account",
-			"credit_in_account_currency",
-			"debit_in_account_currency",
+			"credit",
+			"debit",
 		],
 		order_by="date desc",
 	)
 	for gl in gl_entries:
 		if calculated_field["obtained_by"] == "credit_minus_debit":
-			gl.update(
-				{calculated_field["fieldname"]: gl.credit_in_account_currency - gl.debit_in_account_currency}
-			)
+			gl.update({calculated_field["fieldname"]: gl.credit - gl.debit})
 		elif calculated_field["obtained_by"] == "debit_minus_credit":
-			gl.update(
-				{calculated_field["fieldname"]: gl.debit_in_account_currency - gl.credit_in_account_currency}
-			)
+			gl.update({calculated_field["fieldname"]: gl.debit - gl.credit})
 
 	return gl_entries
 

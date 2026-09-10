@@ -44,6 +44,9 @@ bench install-app erpnext_australian_localisation
   - Sales amounts are reported in G1 based on GL Entries.
 - The final 1A and 1B label amounts will be reported to arrive at the amount business needs to pay the ATO or the amount ATO will refund the business
 - BAS reports can be generated Monthly / Quarterly
+- Both reporting methods require an AUD company currency and an explicitly confirmed non-cash GST accounting basis. Cash-basis attribution is outside this generator's scope.
+- Foreign-currency invoices use their recorded company-base amounts. Simpler BAS uses company-currency GL debits and credits.
+- After installing the schema changes, reconcile and regenerate legacy full-method BAS entries that lack an AUD currency record, then regenerate draft BAS reports before submission. Existing entries and reports are not automatically relabelled as AUD.
 - BAS reports (detailed information with transactional document number) can be printed in PDF format
 - Payment Proposal (Batch) generation for Supplier / Employee Payment
 - ABA File generation for the Payment Batch which can be used to upload into the online banking system for bulk payments for the suppliers / employees

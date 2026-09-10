@@ -48,7 +48,7 @@ def before_submit(doc, event):
 					tax_allocation,
 					tax.au_tax_code,
 					tax.account_head,
-					round(tax.tax_amount_after_discount_amount, 2),
+					round(tax.base_tax_amount_after_discount_amount, 2),
 					sum_depends_on[1],
 				)
 			)
@@ -86,6 +86,12 @@ def create_au_bas_entries(doctype, docname, company, posting_date, result, sum_d
 	Then create AU BAS Entries
 	"""
 	if result:
+		if frappe.db.get_value("Company", company, "default_currency") != "AUD":
+			frappe.throw(
+				frappe._(
+					"BAS entries require an AUD company currency. Convert and attribute foreign-currency company amounts separately."
+				)
+			)
 		result = pd.DataFrame(result)
 		cols_to_sum = [c for c in sum_depends_on if c in result.columns]
 		result = result.groupby(["bas_label", "account", "tax_code"], as_index=False)[cols_to_sum].sum()
@@ -99,6 +105,7 @@ def create_au_bas_entries(doctype, docname, company, posting_date, result, sum_d
 					"voucher_type": doctype,
 					"voucher_no": docname,
 					"company": company,
+					"currency": "AUD",
 				}
 			)
 			bas_doc.save(ignore_permissions=True)

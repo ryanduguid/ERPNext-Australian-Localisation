@@ -19,7 +19,8 @@
   "column_break_ogig",
   "gst_offset_basis",
   "gst_offset_amount",
-  "company"
+  "company",
+  "currency"
  ],
  "fields": [
   {
@@ -103,6 +104,13 @@
    "fieldtype": "Link",
    "label": "Company",
    "options": "Company"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

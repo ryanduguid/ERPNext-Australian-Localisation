@@ -10,6 +10,8 @@
     "company",
     "start_date",
     "reporting_method",
+    "accounting_basis",
+    "bas_currency",
     "column_break_xsiv",
     "reporting_status",
     "end_date",
@@ -458,6 +460,21 @@
       "fieldtype": "Select",
       "label": "Reporting Method",
       "options": "Full reporting method\nSimpler BAS reporting method",
+      "read_only": 1
+    },
+    {
+      "fieldname": "accounting_basis",
+      "fieldtype": "Select",
+      "label": "GST Accounting Basis",
+      "options": "\nNon-cash\nCash",
+      "reqd": 1,
+      "description": "Confirm the GST accounting basis for this period. This generator supports non-cash attribution only."
+    },
+    {
+      "fieldname": "bas_currency",
+      "fieldtype": "Link",
+      "label": "Generated Currency",
+      "options": "Currency",
       "read_only": 1
     },
     {
