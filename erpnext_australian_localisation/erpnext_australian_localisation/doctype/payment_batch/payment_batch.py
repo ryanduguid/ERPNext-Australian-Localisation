@@ -5,6 +5,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.desk.reportview import get_match_cond
 from frappe.model.document import Document
 
 from erpnext_australian_localisation.erpnext_australian_localisation.doctype.payment_batch.aba_file_generator import (
@@ -26,6 +27,7 @@ class PaymentBatch(Document):
 
 	@frappe.whitelist()
 	def generate_bank_file(self):
+		content = generate_aba_file(self) if self.file_format == "ABA" else None
 		file_name = self.name + "." + self.file_format
 		file = frappe.db.exists("File", {"file_name": file_name})
 		if file:
@@ -38,7 +40,7 @@ class PaymentBatch(Document):
 		file = frappe.get_doc({"doctype": "File", "is_private": 1, "file_name": file_name})
 
 		if self.file_format == "ABA":
-			file.content = generate_aba_file(self)
+			file.content = content
 			file.save()
 			self.bank_file_url = file.file_url
 			self.save()
@@ -54,18 +56,26 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 	Payment Batch's Bank Account and are in draft state, except those that are already
 	included in another Payment Batch
 	"""
+	frappe.has_permission("Payment Entry", "read", throw=True)
+	filters = dict(filters)
+	bank_account = frappe.get_doc("Bank Account", filters.pop("bank_account"))
+	bank_account.check_permission("read")
+	frappe.get_doc("Company", filters["company"]).check_permission("read")
+	if bank_account.company != filters["company"]:
+		frappe.throw(_("Bank Account must belong to the selected company."), frappe.PermissionError)
 	if filters.get("party_name"):
 		filters["party_name"] += "%"
 	else:
 		filters["party_name"] = "%"
-	filters["paid_from"] = frappe.db.get_value("Bank Account", filters.pop("bank_account"), "account")
+	filters["paid_from"] = bank_account.account
 
 	return frappe.db.sql(
-		"""
+		f"""
 		select
 			name, party_name, base_paid_amount
 		from `tabPayment Entry`
 		where docstatus=0 and party_type =%(party_type)s and company=%(company)s and party_name like %(party_name)s and paid_from=%(paid_from)s
+		{get_match_cond("Payment Entry")}
 
 		EXCEPT
 		select payment_entry, party_name, amount from `tabPayment Batch Item`
@@ -236,6 +246,7 @@ def create_payment_batch_again(doc):
 
 @frappe.whitelist()
 def get_missing_email_suppliers(docname: str):
+	frappe.get_doc("Payment Batch", docname).check_permission("read")
 	no_email = []
 
 	payment_rows = frappe.get_all(
