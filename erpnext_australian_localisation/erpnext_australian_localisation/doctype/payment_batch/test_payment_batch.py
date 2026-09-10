@@ -1,6 +1,8 @@
 # Copyright (c) 2025, frappe.dev@arus.co.in and Contributors
 # See license.txt
 
+import re
+import sqlite3
 from inspect import unwrap
 from unittest import TestCase
 from unittest.mock import Mock, patch
@@ -143,6 +145,51 @@ class TestPaymentBatch(TestCase):
 			self.assertEqual(self.lookup(), [])
 			self.assertIn(condition, query.call_args.args[0])
 			self.assertEqual(query.call_args.args[1]["paid_from"], "Synthetic Account")
+
+	def test_compound_permissions_cannot_override_payment_filters(self):
+		connection = sqlite3.connect(":memory:")
+		self.addCleanup(connection.close)
+		connection.execute(
+			"CREATE TABLE `tabPayment Entry` (name, party_name, base_paid_amount, docstatus, party_type, company, paid_from, owner)"
+		)
+		connection.execute("CREATE TABLE `tabPayment Batch Item` (payment_entry, party_name, amount)")
+		valid = [
+			"allowed",
+			"Supplier",
+			12,
+			0,
+			"Supplier",
+			"Synthetic Company",
+			"Synthetic Account",
+			"allowed",
+		]
+		rows = [valid]
+		for column, value in ((3, 1), (4, "Customer"), (5, "Other Company"), (6, "Other Account")):
+			row = valid.copy()
+			row[0], row[7], row[column] = f"excluded-{column}", "shared", value
+			rows.append(row)
+		connection.executemany("INSERT INTO `tabPayment Entry` VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+
+		def execute(query, parameters, **kwargs):
+			query = re.sub(r"%\((\w+)\)s", r":\1", query)
+			return connection.execute(query, parameters).fetchall()
+
+		for condition in (
+			"",
+			" and owner = 'allowed' or owner = 'shared'",
+			" and (owner = 'allowed' or owner = 'shared')",
+		):
+			with (
+				self.subTest(condition=condition),
+				patch.object(
+					frappe,
+					"get_doc",
+					return_value=Mock(company="Synthetic Company", account="Synthetic Account"),
+				),
+				patch.object(payment_batch, "get_match_cond", return_value=condition),
+				patch.object(frappe.db, "sql", side_effect=execute),
+			):
+				self.assertEqual(self.lookup(), [("allowed", "Supplier", 12)])
 
 	def lookup(self):
 		return unwrap(payment_batch.get_payment_entry)(

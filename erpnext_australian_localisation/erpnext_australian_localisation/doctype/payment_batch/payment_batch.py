@@ -75,7 +75,7 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 			name, party_name, base_paid_amount
 		from `tabPayment Entry`
 		where docstatus=0 and party_type =%(party_type)s and company=%(company)s and party_name like %(party_name)s and paid_from=%(paid_from)s
-		{get_match_cond("Payment Entry")}
+		and (1=1 {get_match_cond("Payment Entry")})
 
 		EXCEPT
 		select payment_entry, party_name, amount from `tabPayment Batch Item`
