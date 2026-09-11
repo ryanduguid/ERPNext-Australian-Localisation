@@ -46,6 +46,9 @@ bench install-app erpnext_australian_localisation
 - BAS reports can be generated Monthly / Quarterly
 - Both reporting methods require an AUD company currency and an explicitly confirmed non-cash GST accounting basis. Cash-basis attribution is outside this generator's scope.
 - Foreign-currency invoices use their recorded company-base amounts. Simpler BAS uses company-currency GL debits and credits.
+- Full BAS excludes private and input-taxed purchase GST from 1B and includes it in G13/G15. Mixed eligibility requires ERPNext v16 item tax records that reconcile to the company-currency tax total. Split partly private acquisitions into separately supported business and private invoice rows.
+- Simpler BAS stops when the period contains private or input-taxed purchase entries because its ledger totals cannot apply those item exclusions. Use the full reporting method after reconciling the entries. Financial-acquisition and reduced-credit exceptions require separate assessment.
+- After updating purchase allocation, reconcile and regenerate affected existing invoice BAS entries and draft reports. Previously submitted BAS reports and ledger postings are not amended automatically.
 - After installing the schema changes, reconcile and regenerate legacy full-method BAS entries that lack an AUD currency record, then regenerate draft BAS reports before submission. Existing entries and reports are not automatically relabelled as AUD.
 - BAS reports (detailed information with transactional document number) can be printed in PDF format
 - Payment Proposal (Batch) generation for Supplier / Employee Payment
