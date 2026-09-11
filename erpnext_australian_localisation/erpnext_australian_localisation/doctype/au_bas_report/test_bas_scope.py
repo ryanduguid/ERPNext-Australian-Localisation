@@ -24,6 +24,26 @@ class Record(dict):
 
 
 class TestBASScope(TestCase):
+	def test_simpler_report_refuses_item_exclusions_that_its_gl_totals_cannot_apply(self):
+		doc = Record(
+			company="Example",
+			accounting_basis="Non-cash",
+			reporting_method="Simpler",
+			start_date="2026-07-01",
+			end_date="2026-07-31",
+		)
+		with patch.object(frappe.db, "get_value", return_value="AUD"):
+			with patch.object(frappe.db, "exists", return_value=None):
+				bas.validate_reporting_scope(doc)
+			with (
+				patch.object(frappe.db, "exists", return_value="EXCLUDED-PURCHASE"),
+				self.assertRaises(frappe.ValidationError),
+			):
+				bas.validate_reporting_scope(doc)
+			doc.reporting_method = "Full reporting method"
+			with patch.object(frappe.db, "exists", return_value="EXCLUDED-PURCHASE"):
+				bas.validate_reporting_scope(doc)
+
 	def test_entry_creation_refuses_non_aud_company(self):
 		with (
 			patch.object(frappe.db, "get_value", return_value="USD"),

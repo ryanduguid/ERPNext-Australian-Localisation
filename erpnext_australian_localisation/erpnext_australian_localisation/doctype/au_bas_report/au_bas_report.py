@@ -48,10 +48,24 @@ def validate_reporting_scope(doc):
 				"BAS generation requires an AUD company currency. A foreign-currency ledger needs a separate AUD attribution calculation."
 			)
 		)
+	if doc.reporting_method != "Full reporting method" and frappe.db.exists(
+		"AU BAS Entry",
+		{
+			"company": doc.company,
+			"date": ["between", [doc.start_date, doc.end_date]],
+			"tax_code": ["in", ["AUPPVTUSE", "AUPINPTAX"]],
+		},
+	):
+		frappe.throw(
+			_(
+				"This period contains private or input-taxed purchases. Simpler BAS ledger totals cannot "
+				"apply their item exclusions. Reconcile the purchase entries and use the full reporting method."
+			)
+		)
 
 
 @frappe.whitelist()
-def get_gst(name):
+def get_gst(name: str):
 	"""
 	Update the BAS Report G labels based on the reporting method
 	"""
