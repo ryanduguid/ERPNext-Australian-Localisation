@@ -26,26 +26,28 @@ def aba_amount_cents(amount):
 		frappe.throw(_("ABA amounts must be valid positive numbers."))
 	if not value.is_finite() or not 0 < value <= Decimal("99999999.99"):
 		frappe.throw(_("ABA amounts must be positive and no greater than 99,999,999.99."))
-	cents = round(value * 100)
-	if cents == 0:
-		frappe.throw(_("ABA amounts must round to at least one cent."))
-	return cents
+	cents = value * 100
+	if cents != cents.to_integral_value():
+		frappe.throw(_("ABA amounts must be whole cents; fractional cents cannot be exported."))
+	return int(cents)
 
 
 @frappe.whitelist()
 def generate_aba_file(payment_batch):
+	bank_account = frappe.db.get_value(
+		"Bank Account",
+		payment_batch.bank_account,
+		["company", "apca_number", "bank_account_no", "branch_code", "fi_abbr", "currency"],
+		as_dict=True,
+	)
+	if not bank_account or bank_account.currency != "AUD" or payment_batch.currency != "AUD":
+		frappe.throw(_("ABA export requires an AUD bank account and payment batch."))
 	amounts = [aba_amount_cents(row.amount) for row in payment_batch.payment_created]
 	total_cents = aba_amount_cents(payment_batch.total_paid_amount)
 	if sum(amounts) != total_cents:
 		frappe.throw(_("ABA payment amounts do not reconcile to the batch total."))
 	if len(amounts) > 999999:
 		frappe.throw(_("An ABA file allows at most 999,999 payments."))
-	bank_account = frappe.db.get_value(
-		"Bank Account",
-		payment_batch.bank_account,
-		["company", "apca_number", "bank_account_no", "branch_code", "fi_abbr"],
-		as_dict=True,
-	)
 	posting_date = datetime.strptime(payment_batch.posting_date, "%Y-%m-%d")
 
 	# header

@@ -17,7 +17,7 @@ def on_update(doc, event):
 
 		for field in ["expenses", "taxes"]:
 			for i in doc.get(field):
-				if i.au_tax_code != "AUSINPTAX":
+				if i.au_tax_code != "AUPINPTAX":
 					tax_code = frappe.db.get_value(
 						"AU Tax Determination",
 						{

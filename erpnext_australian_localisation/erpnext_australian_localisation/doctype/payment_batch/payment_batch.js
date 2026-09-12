@@ -86,7 +86,7 @@ frappe.ui.form.on("Payment Batch", {
 				frappe.call({
 					method: "erpnext_australian_localisation.erpnext_australian_localisation.doctype.payment_batch.payment_batch.create_payment_batch_again",
 					args: {
-						doc: frm.doc
+						docname: frm.doc.name
 					},
 					callback: (data) => {
 						frappe.set_route("payment-batch", data.message);
@@ -103,8 +103,9 @@ frappe.ui.form.on("Payment Batch", {
 					method: "erpnext_australian_localisation.erpnext_australian_localisation.doctype.payment_batch.payment_batch.get_missing_email_suppliers",
 					args: { docname: frm.doc.name },
 					callback(r) {
-						const missing = [...new Set(r.message || [])];
-						const total = frm.doc.payment_created.length;
+						const missing = r.message || [];
+						const total = new Set(frm.doc.payment_created.map((row) => row.party))
+							.size;
 
 						const do_send = () => {
 							frappe.call({
@@ -112,7 +113,8 @@ frappe.ui.form.on("Payment Batch", {
 								args: { docname: frm.doc.name },
 								freeze: true,
 								freeze_message: __("Sending remittance emails..."),
-								callback() {
+								callback(result) {
+									if (!result.message) return;
 									frappe.show_alert({
 										message: __("Remittance emails sent successfully"),
 										indicator: "green"

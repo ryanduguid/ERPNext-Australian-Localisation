@@ -8,13 +8,17 @@ from erpnext_australian_localisation.erpnext_australian_localisation.doctype.pay
 
 @frappe.whitelist()
 def check_party_email(docname: str, party_type: str):
-	# party, party_name = frappe.db.get_value("Payment Entry", docname, ["party", "party_name"])
-	entry = frappe.db.get_value(
-		"Payment Entry",
-		docname,
-		["party", "party_name"],
-		as_dict=True,
-	)
+	entry = frappe.get_doc("Payment Entry", docname)
+	entry.check_permission("read")
+	if party_type != entry.party_type:
+		frappe.throw(_("Party type must match the Payment Entry."), frappe.PermissionError)
+	get_party_email(entry, party_type)
+	return True
+
+
+def get_party_email(entry, party_type):
+	if entry.party_type != party_type:
+		frappe.throw(_("Party type must match the Payment Entry."), frappe.PermissionError)
 	email = frappe.db.get_value(
 		"Contact",
 		{"link_doctype": party_type, "link_name": entry.party, "is_primary_contact": 1},
@@ -27,24 +31,20 @@ def check_party_email(docname: str, party_type: str):
 				"Please set a Primary Contact with email address in the {0} master for {1} to send the {2}"
 			).format(party_type, entry.party_name, action)
 		)
-	return True
+	return email
 
 
 @frappe.whitelist()
 def send_payment_receipt(docname: str):
 	doc = frappe.get_doc("Payment Entry", docname)
+	doc.check_permission("read")
+	email = get_party_email(doc, "Customer")
 
 	template = frappe.get_cached_value(
 		"AU Localisation Settings", "AU Localisation Settings", "payment_receipt_template"
 	)
 	if not template:
 		frappe.throw(_("Please set a Payment Receipt Template in AU Localisation Settings"))
-
-	email = frappe.db.get_value(
-		"Contact",
-		{"link_doctype": "Customer", "link_name": doc.party, "is_primary_contact": 1},
-		"email_id",
-	)
 
 	pe_dict = doc.as_dict()
 
@@ -74,23 +74,14 @@ def send_payment_receipt(docname: str):
 
 @frappe.whitelist()
 def send_remittance_email(docname: str):
+	doc = frappe.get_doc("Payment Entry", docname)
+	doc.check_permission("read")
+	email = get_party_email(doc, "Supplier")
 	template = frappe.get_cached_value(
 		"AU Localisation Settings", "AU Localisation Settings", "remittance_advice_template"
 	)
 	if not template:
 		frappe.throw(_("Please set a Remittance Advice Template in AU Localisation Settings"))
-	party = frappe.db.get_value(
-		"Payment Entry",
-		docname,
-		"party",
-	)
-
-	email = frappe.db.get_value(
-		"Contact",
-		{"link_doctype": "Supplier", "link_name": party, "is_primary_contact": 1},
-		"email_id",
-	)
-
 	if email:
 		_send_remittance_email(
 			payment_entry=docname,

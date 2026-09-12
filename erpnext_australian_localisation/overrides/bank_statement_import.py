@@ -13,9 +13,14 @@ def after_save(doc, methods=None):
 	if not doc.bs_import_file:
 		return
 
-	bank_statement_format, currency = frappe.db.get_value(
-		"Bank Account", doc.bank_account, ["bank_statement_format", "currency"]
+	account = (
+		frappe.db.get_value("Bank Account", doc.bank_account, ["bank_statement_format", "currency"])
+		if doc.bank_account
+		else None
 	)
+	if not account:
+		frappe.throw(_("Please select a valid Bank Account and set its Bank Statement Format."))
+	bank_statement_format, currency = account
 
 	if not bank_statement_format:
 		frappe.throw(_("Please set Bank Statement Format in Bank Account"))
@@ -104,6 +109,11 @@ def validate_csv_for_bank_format(content, format_doc):
 
 
 def convert_using_child_mapping(content, format_doc, bank_account, currency):
+	from erpnext_australian_localisation.erpnext_australian_localisation.doctype.au_bank_statement_format.au_bank_statement_format import (
+		validate_mapping,
+	)
+
+	validate_mapping(format_doc)
 	output = io.StringIO()
 	writer = csv.writer(output)
 
@@ -254,13 +264,13 @@ def validate_account_and_branch(reader, format_doc, bank_account):
 			if bank_acc_no and not raw_val.endswith(bank_acc_no):
 				throw_mismatch(bank_acc_no, raw_val)
 			else:
-				return
+				continue
 
 		elif bank_acc_no and raw_val != bank_acc_no:
 			throw_mismatch(bank_acc_no, raw_val)
 
 		else:
-			return
+			continue
 
 	if not row_found:
 		frappe.throw(_("CSV file is empty"))

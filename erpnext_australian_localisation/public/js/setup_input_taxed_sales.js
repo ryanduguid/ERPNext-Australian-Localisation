@@ -15,7 +15,7 @@ frappe.ui.form.on(DOCTYPE + " Item", {
 	}
 });
 
-function get_item_tax_template(frm, cdt, cdn) {
+function get_item_tax_template(frm, cdt, cdn, request) {
 	let item = locals[cdt][cdn];
 	if (item.item_code && item.rate) {
 		frappe.call({
@@ -33,6 +33,7 @@ function get_item_tax_template(frm, cdt, cdn) {
 				}
 			},
 			callback: function (r) {
+				if (locals[cdt]?.[cdn]?._tax_template_request !== request) return;
 				const item_tax_template = r.message;
 				frappe.model.set_value(cdt, cdn, "item_tax_template", item_tax_template);
 			}
@@ -41,9 +42,11 @@ function get_item_tax_template(frm, cdt, cdn) {
 }
 
 function update_sales_item_tax_template(frm, cdt, cdn) {
+	const request = (locals[cdt][cdn]._tax_template_request || 0) + 1;
+	locals[cdt][cdn]._tax_template_request = request;
 	var row = locals[cdt][cdn];
 	if (!row.input_taxed) {
-		get_item_tax_template(frm, cdt, cdn);
+		get_item_tax_template(frm, cdt, cdn, request);
 	} else {
 		frappe.db
 			.get_list("Item Tax Template", {
@@ -51,12 +54,23 @@ function update_sales_item_tax_template(frm, cdt, cdn) {
 				pluck: "name"
 			})
 			.then((data) => {
+				if (locals[cdt]?.[cdn]?._tax_template_request !== request) return;
+				if (data.length !== 1) {
+					frappe.throw(
+						__(
+							"Configure exactly one matching GST exempt item tax template for this company."
+						)
+					);
+					return;
+				}
 				frappe.model.set_value(cdt, cdn, "item_tax_template", data[0]);
 			});
 	}
 }
 
 function update_purchase_item_tax_template(frm, cdt, cdn) {
+	const request = (locals[cdt][cdn]._tax_template_request || 0) + 1;
+	locals[cdt][cdn]._tax_template_request = request;
 	let row = locals[cdt][cdn];
 	if (row.input_taxed && row.private_use) {
 		frappe.model.set_value(cdt, cdn, "input_taxed", 0);
@@ -68,7 +82,7 @@ function update_purchase_item_tax_template(frm, cdt, cdn) {
 			)
 		);
 	} else if (!row.input_taxed && !row.private_use) {
-		get_item_tax_template(frm, cdt, cdn);
+		get_item_tax_template(frm, cdt, cdn, request);
 	} else {
 		frappe.db
 			.get_list("Item Tax Template", {
@@ -76,6 +90,15 @@ function update_purchase_item_tax_template(frm, cdt, cdn) {
 				pluck: "name"
 			})
 			.then((data) => {
+				if (locals[cdt]?.[cdn]?._tax_template_request !== request) return;
+				if (data.length !== 1) {
+					frappe.throw(
+						__(
+							"Configure exactly one matching GST exempt item tax template for this company."
+						)
+					);
+					return;
+				}
 				frappe.model.set_value(cdt, cdn, "item_tax_template", data[0]);
 			});
 	}

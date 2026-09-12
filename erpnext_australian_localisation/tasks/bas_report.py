@@ -1,6 +1,5 @@
-from datetime import datetime
-
 import frappe
+from frappe.utils import now_datetime
 
 
 def create_scheduled_bas_reports():
@@ -10,7 +9,7 @@ def create_scheduled_bas_reports():
 	- Monthly companies: one report every month.
 	- Quarterly companies: one report at the start of each quarter (Jan/Apr/Jul/Oct).
 	"""
-	today = datetime.today()
+	today = now_datetime()
 
 	reporting_periods = frappe.get_all(
 		"AU BAS Reporting Period",
@@ -25,13 +24,13 @@ def create_scheduled_bas_reports():
 		if row.reporting_period == "Quarterly" and today.month not in (1, 4, 7, 10):
 			continue
 
-		create_bas_report(row.company)
+		create_bas_report(row.company, today)
 
 
-def create_bas_report(company):
+def create_bas_report(company, today=None):
 	from frappe.utils.data import get_last_day, get_quarter_ending, get_quarter_start
 
-	today = datetime.today()
+	today = today or now_datetime()
 
 	reporting_period = frappe.db.get_value(
 		"AU BAS Reporting Period", {"company": company}, "reporting_period"

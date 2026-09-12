@@ -6,7 +6,7 @@ from frappe import _
 
 def validate(doc, event):
 	if doc.get("branch_code"):
-		pattern = re.compile(r"^\d{6}$")
+		pattern = re.compile(r"^[0-9]{6}$")
 		branch_code = doc.branch_code.replace("-", "")
 		if not pattern.match(branch_code):
 			frappe.throw(_("Only 6-digit numbers are allowed in Branch code."))
@@ -14,7 +14,7 @@ def validate(doc, event):
 			doc.branch_code = branch_code[0:3] + "-" + branch_code[3:]
 
 	if doc.get("bank_account_no"):
-		pattern = re.compile(r"^\d{6,10}$")
+		pattern = re.compile(r"^[0-9]{6,10}$")
 		if not pattern.match(doc.bank_account_no):
 			frappe.throw(_("Only 6 to 10 digit numbers are allowed in Bank Account Number."))
 
@@ -22,7 +22,7 @@ def validate(doc, event):
 def bank_account_validation(doc, event):
 	if doc.file_format != "-None-":
 		if doc.apca_number:
-			pattern = re.compile(r"^\d{6}$")
+			pattern = re.compile(r"^[0-9]{6}$")
 			if not pattern.match(doc.apca_number):
 				frappe.throw(_("APCA Number must be exactly 6 digits."))
 

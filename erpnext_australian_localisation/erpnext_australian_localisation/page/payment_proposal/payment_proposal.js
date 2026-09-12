@@ -296,7 +296,7 @@ class PaymentProposal {
 				}
 			}
 		];
-		if (data.reference_entries) {
+		if (data.reference_entries.length) {
 			party_fields.splice(
 				5,
 				0,
@@ -580,7 +580,7 @@ class PaymentProposal {
 				"name"
 			)
 			.then((data) => {
-				bank_account = data.message;
+				bank_account = data.message || {};
 			});
 		const Dialog = new frappe.ui.Dialog({
 			title: __("Payment Batch Creation"),

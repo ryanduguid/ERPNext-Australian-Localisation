@@ -6,7 +6,10 @@ from frappe import _
 
 
 @frappe.whitelist()
-def fetch_and_update_abn(tax_id: str, guid: str) -> dict:
+def fetch_and_update_abn(tax_id: str) -> dict:
+	guid = frappe.get_cached_value("AU Localisation Settings", "AU Localisation Settings", "abn_lookup_guid")
+	if not guid:
+		frappe.throw(_("Please enter an ABN Lookup GUID in AU Localisation Settings."))
 	response = requests.get(
 		"https://abr.business.gov.au/json/AbnDetails.aspx",
 		params={"abn": tax_id, "guid": guid},
