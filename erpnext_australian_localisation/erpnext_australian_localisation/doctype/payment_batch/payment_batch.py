@@ -82,7 +82,8 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 	filters["page_len"] = page_len
 	filters["start"] = start
 
-	return frappe.db.sql(
+	# Only Frappe's permission clause is interpolated. Request values are bound.
+	return frappe.db.sql(  # nosemgrep: frappe-sql-format-injection
 		f"""
 		select
 			name, party_name, base_paid_amount
@@ -104,7 +105,7 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 
 
 @frappe.whitelist()
-def update_payment_batch(source_name, target_doc=None):
+def update_payment_batch(source_name: str, target_doc: str | dict | Document | None = None):
 	"""
 	Update the Payment Batch by adding the Payment Entry
 		source_name : str (PaymentEntry)

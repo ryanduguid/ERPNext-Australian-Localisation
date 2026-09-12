@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 import frappe
 from frappe import _
+from frappe.model.document import Document
 
 ABA_ACCOUNT_WIDTH = 9
 
@@ -33,7 +34,7 @@ def aba_amount_cents(amount):
 
 
 @frappe.whitelist()
-def generate_aba_file(payment_batch):
+def generate_aba_file(payment_batch: Document):
 	bank_account = frappe.db.get_value(
 		"Bank Account",
 		payment_batch.bank_account,

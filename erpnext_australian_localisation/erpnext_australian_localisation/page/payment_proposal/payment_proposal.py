@@ -10,7 +10,7 @@ from erpnext_australian_localisation.erpnext_australian_localisation.doctype.pay
 
 
 @frappe.whitelist()
-def get_unpaid_entries(filters):
+def get_unpaid_entries(filters: str):
 	filters = json.loads(filters)
 	if filters.get("party_type") not in ("Supplier", "Employee"):
 		frappe.throw(_("Party type must be Supplier or Employee."))
