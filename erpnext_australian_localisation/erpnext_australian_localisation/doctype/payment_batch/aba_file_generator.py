@@ -33,8 +33,8 @@ def aba_amount_cents(amount):
 	return int(cents)
 
 
-@frappe.whitelist()
 def generate_aba_file(payment_batch: Document):
+	"""Format a batch supplied by the authorised document method."""
 	bank_account = frappe.db.get_value(
 		"Bank Account",
 		payment_batch.bank_account,
