@@ -49,7 +49,11 @@ frappe.ui.form.on("AU Localisation Settings", {
 	after_save(frm) {
 		// sets latest values in frappe.boot for current user
 		// other users will still need to refresh page
-		Object.assign(au_localisation_settings, frm.doc);
+		Object.assign(au_localisation_settings, {
+			make_tax_category_mandatory: frm.doc.make_tax_category_mandatory,
+			bas_reporting_period: frm.doc.bas_reporting_period,
+			has_abn_lookup_guid: Boolean(frm.doc.abn_lookup_guid)
+		});
 	}
 });
 

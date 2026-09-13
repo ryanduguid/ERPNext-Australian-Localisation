@@ -18,7 +18,7 @@
    "fieldtype": "Select",
    "label": "Credit Debit Mapping",
    "options": "Single credit&debit\nCombined credit&debit",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "date_format",

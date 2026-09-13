@@ -1,8 +1,6 @@
 # Copyright (c) 2025, frappe.dev@arus.co.in and contributors
 # For license information, please see license.txt
 
-import json
-
 import frappe
 from frappe import _
 from frappe.desk.reportview import get_match_cond
@@ -29,15 +27,28 @@ class PaymentBatch(Document):
 	def generate_bank_file(self):
 		content = generate_aba_file(self) if self.file_format == "ABA" else None
 		file_name = self.name + "." + self.file_format
-		file = frappe.db.exists("File", {"file_name": file_name})
+		file = frappe.db.exists(
+			"File",
+			{
+				"file_name": file_name,
+				"attached_to_doctype": "Payment Batch",
+				"attached_to_name": self.name,
+			},
+		)
 		if file:
 			frappe.delete_doc("File", file)
 			self.bank_file_url = ""
 			self.save()
-			# need to delete the previous file
-			frappe.db.commit()  # nosemgrep
 
-		file = frappe.get_doc({"doctype": "File", "is_private": 1, "file_name": file_name})
+		file = frappe.get_doc(
+			{
+				"doctype": "File",
+				"is_private": 1,
+				"file_name": file_name,
+				"attached_to_doctype": "Payment Batch",
+				"attached_to_name": self.name,
+			}
+		)
 
 		if self.file_format == "ABA":
 			file.content = content
@@ -68,8 +79,11 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 	else:
 		filters["party_name"] = "%"
 	filters["paid_from"] = bank_account.account
+	filters["page_len"] = page_len
+	filters["start"] = start
 
-	return frappe.db.sql(
+	# Only Frappe's permission clause is interpolated. Request values are bound.
+	return frappe.db.sql(  # nosemgrep: frappe-sql-format-injection
 		f"""
 		select
 			name, party_name, base_paid_amount
@@ -77,8 +91,13 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 		where docstatus=0 and party_type =%(party_type)s and company=%(company)s and party_name like %(party_name)s and paid_from=%(paid_from)s
 		and (1=1 {get_match_cond("Payment Entry")})
 
-		EXCEPT
-		select payment_entry, party_name, amount from `tabPayment Batch Item`
+		and not exists (
+			select 1 from `tabPayment Batch Item` as item
+			join `tabPayment Batch` as batch on batch.name = item.parent
+			where item.payment_entry = `tabPayment Entry`.name and batch.docstatus != 2
+		)
+		order by name
+		limit %(page_len)s offset %(start)s
 		""",
 		filters,
 		as_dict=True,
@@ -86,7 +105,7 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 
 
 @frappe.whitelist()
-def update_payment_batch(source_name, target_doc=None):
+def update_payment_batch(source_name: str, target_doc: str | dict | Document | None = None):
 	"""
 	Update the Payment Batch by adding the Payment Entry
 		source_name : str (PaymentEntry)
@@ -99,8 +118,11 @@ def update_payment_batch(source_name, target_doc=None):
 		as_dict=True,
 	)
 
+	if not party:
+		frappe.msgprint(_("Payment Entry {0} was not found.").format(source_name))
+		return target_doc
 	account_details = frappe.db.get_value(party.party_type, party.party, ["bank_account_no", "branch_code"])
-	if account_details[0] and account_details[1]:
+	if account_details and account_details[0] and account_details[1]:
 		row = frappe.new_doc("Payment Batch Item")
 		row.update(party)
 
@@ -221,20 +243,25 @@ def update_on_payment_entry_updation(payment_entry):
 
 
 @frappe.whitelist()
-def create_payment_batch_again(doc):
+def create_payment_batch_again(docname: str):
 	"""
 	Rework Batch
 	Amend all cancelled Payment Entry to create a new Payment Batch
 	"""
-	doc = json.loads(doc)
+	doc = frappe.get_doc("Payment Batch", docname)
+	doc.check_permission("read")
+	frappe.has_permission("Payment Batch", "create", throw=True)
+	if doc.docstatus != 2:
+		frappe.throw(_("Only a cancelled Payment Batch can be reworked."))
 
 	pb = frappe.new_doc("Payment Batch")
-	pb.update(
-		{"bank_account": doc["bank_account"], "company": doc["company"], "posting_date": doc["posting_date"]}
-	)
+	pb.update({"bank_account": doc.bank_account, "company": doc.company, "posting_date": doc.posting_date})
 
-	for payment in doc["payment_created"]:
+	for payment in doc.payment_created:
 		old_pe = frappe.get_doc("Payment Entry", payment["payment_entry"])
+		old_pe.check_permission("read")
+		if old_pe.docstatus != 2 or old_pe.company != doc.company:
+			frappe.throw(_("Rework requires cancelled Payment Entries from the batch company."))
 		pe = frappe.copy_doc(old_pe)
 		pe.amended_from = payment["payment_entry"]
 		pe.save()
@@ -247,7 +274,7 @@ def create_payment_batch_again(doc):
 @frappe.whitelist()
 def get_missing_email_suppliers(docname: str):
 	frappe.get_doc("Payment Batch", docname).check_permission("read")
-	no_email = []
+	no_email = {}
 
 	payment_rows = frappe.get_all(
 		"Payment Batch Item",
@@ -263,13 +290,14 @@ def get_missing_email_suppliers(docname: str):
 			"email_id",
 		)
 		if not email:
-			no_email.append(row.party_name)
-	return no_email
+			no_email[row.party] = row.party_name
+	return list(no_email.values())
 
 
 @frappe.whitelist()
 def send_remittance_email_from_pb(docname: str):
 	doc = frappe.get_doc("Payment Batch", docname)
+	doc.check_permission("read")
 
 	template = frappe.get_cached_value(
 		"AU Localisation Settings",
@@ -301,6 +329,11 @@ def send_remittance_email_from_pb(docname: str):
 
 		sent.add(row.party_name)
 
+	if not sent:
+		frappe.msgprint(
+			_("No remittance emails were sent. Set primary contact email addresses for the suppliers.")
+		)
+		return False
 	log_remittance_status(doc, sent)
 
 	return True

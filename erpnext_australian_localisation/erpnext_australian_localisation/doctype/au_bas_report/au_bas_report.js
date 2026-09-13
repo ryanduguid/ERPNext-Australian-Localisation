@@ -26,15 +26,15 @@ frappe.ui.form.on("AU BAS Report", {
 					frm.trigger("update_intro");
 				}
 				frm.add_custom_button(__("Update BAS Data"), () => {
-					frappe.dom.freeze();
 					if (frm.doc.reporting_status === "In Review") {
 						frappe.realtime.on("bas_data_generator", () => {});
+						frappe.dom.freeze();
 						frappe.call({
 							method: "erpnext_australian_localisation.erpnext_australian_localisation.doctype.au_bas_report.au_bas_report.get_gst",
 							args: {
 								name: frm.doc.name
 							},
-							callback: function () {
+							always: function () {
 								frappe.dom.unfreeze();
 							}
 						});

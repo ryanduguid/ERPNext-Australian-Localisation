@@ -16,14 +16,14 @@
    "in_list_view": 1,
    "label": "ERPNext Column",
    "options": "Date\nDeposit\nWithdrawal\nDescription\nReference Number",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "bank_statement_column",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Bank Statement Column",
-   "read_only": 1
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,

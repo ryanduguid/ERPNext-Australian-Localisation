@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.desk.reportview import get_match_cond
 
 from erpnext_australian_localisation.erpnext_australian_localisation.doctype.payment_batch.payment_batch import (
 	update_payment_batch,
@@ -9,15 +10,22 @@ from erpnext_australian_localisation.erpnext_australian_localisation.doctype.pay
 
 
 @frappe.whitelist()
-def get_unpaid_entries(filters):
+def get_unpaid_entries(filters: str):
 	filters = json.loads(filters)
+	if filters.get("party_type") not in ("Supplier", "Employee"):
+		frappe.throw(_("Party type must be Supplier or Employee."))
+	filters["created_by"] = filters.get("created_by") or ""
+	reference_type = "Purchase Invoice" if filters["party_type"] == "Supplier" else "Expense Claim"
+	frappe.has_permission(reference_type, "read", throw=True)
+	frappe.has_permission(filters["party_type"], "read", throw=True)
+	frappe.get_doc("Company", filters["company"]).check_permission("read")
 
 	if filters["party_type"] == "Supplier":
 		query = get_query_for_supplier_outstanding_entries(filters)
 	else:
 		query = get_query_for_employee_outstanding_expense(filters)
 
-	data = frappe.db.sql(query, as_dict=True)
+	data = frappe.db.sql(query, filters, as_dict=True)
 
 	return data
 
@@ -86,10 +94,10 @@ def get_query_for_supplier_outstanding_entries(filters):
 	Returns the query for getting the Purchase Invoice under some conditions specified as follows.
 	"""
 	filters["condition_based_on_due_date"] = ""
-	if filters["from_due_date"]:
-		filters["condition_based_on_due_date"] = f"and pi.due_date >= '{filters['from_due_date']}'"
-	if filters["to_due_date"]:
-		filters["condition_based_on_due_date"] += f" and pi.due_date <= '{filters['to_due_date']}'"
+	if filters.get("from_due_date"):
+		filters["condition_based_on_due_date"] = "and pi.due_date >= %(from_due_date)s"
+	if filters.get("to_due_date"):
+		filters["condition_based_on_due_date"] += " and pi.due_date <= %(to_due_date)s"
 	query = f"""
 		WITH
 		supplier AS
@@ -100,6 +108,7 @@ def get_query_for_supplier_outstanding_entries(filters):
 				case when (NULLIF(bank_account_no,'') IS NOT NULL and NULLIF(branch_code,'') IS NOT NULL) then 1 else 0 end as is_included
 			FROM tabSupplier
 			WHERE is_allowed_in_pp = 1
+			and (1=1 {get_match_cond("Supplier")})
 		)
 
 		SELECT
@@ -137,13 +146,14 @@ def get_query_for_supplier_outstanding_entries(filters):
 		LEFT JOIN `tabPurchase Invoice` as pi
 			ON s.supplier = pi.supplier
 		LEFT JOIN `tabPayment Entry Reference` as per
-			ON per.reference_name = pi.name and per.docstatus = 0
+			ON per.reference_name = pi.name and per.reference_doctype = 'Purchase Invoice' and per.docstatus = 0
 		WHERE
 			pi.docstatus = 1
 			and pi.outstanding_amount > 0
-			and pi.company ='{filters["company"]}'
-			and pi.owner like '{filters["created_by"]}%'
+			and pi.company = %(company)s
+			and (%(created_by)s = '' or pi.owner = %(created_by)s)
 			{filters["condition_based_on_due_date"]}
+			and (1=1 {get_match_cond("Purchase Invoice").replace("`tabPurchase Invoice`", "pi")})
 		GROUP BY s.supplier
 		"""
 	return query
@@ -154,10 +164,10 @@ def get_query_for_employee_outstanding_expense(filters):
 	Returns the query for getting the Expense Claim under some conditions specified as follows.
 	"""
 	filters["condition_based_on_posting_date"] = ""
-	if filters["from_due_date"]:
-		filters["condition_based_on_posting_date"] = f"and ec.posting_date >= '{filters['from_due_date']}'"
-	if filters["to_due_date"]:
-		filters["condition_based_on_posting_date"] += f" and ec.posting_date <= '{filters['to_due_date']}'"
+	if filters.get("from_due_date"):
+		filters["condition_based_on_posting_date"] = "and ec.posting_date >= %(from_due_date)s"
+	if filters.get("to_due_date"):
+		filters["condition_based_on_posting_date"] += " and ec.posting_date <= %(to_due_date)s"
 	query = f"""
 	WITH
 		employee AS
@@ -167,7 +177,8 @@ def get_query_for_employee_outstanding_expense(filters):
 				lodgement_reference,
 				case when (NULLIF(bank_account_no,'') IS NOT NULL and NULLIF(branch_code,'') IS NOT NULL) then 1 else 0 end as is_included
 			FROM tabEmployee
-			WHERE company = '{filters["company"]}'
+			WHERE company = %(company)s
+			and (1=1 {get_match_cond("Employee")})
 		)
 
 		SELECT
@@ -202,13 +213,14 @@ def get_query_for_employee_outstanding_expense(filters):
 		LEFT JOIN `tabExpense Claim` as ec
 			ON e.employee = ec.employee
 		LEFT JOIN `tabPayment Entry Reference` as per
-			ON per.reference_name = ec.name and per.docstatus = 0
+			ON per.reference_name = ec.name and per.reference_doctype = 'Expense Claim' and per.docstatus = 0
 		WHERE
 			ec.docstatus = 1
 			and ec.status = 'Unpaid'
-			and ec.company ='{filters["company"]}'
-			and ec.owner like '{filters["created_by"]}%'
+			and ec.company = %(company)s
+			and (%(created_by)s = '' or ec.owner = %(created_by)s)
 			{filters["condition_based_on_posting_date"]}
+			and (1=1 {get_match_cond("Expense Claim").replace("`tabExpense Claim`", "ec")})
 		GROUP BY e.employee
 		"""
 	return query

@@ -37,9 +37,7 @@ au_localisation.abn.handle_blur = function (frm) {
 	au_localisation.abn.clear_tax_id_fields(frm);
 
 	if (!frm.doc.is_verify_abn) return;
-	const guid = au_localisation_settings.abn_lookup_guid;
-
-	if (!guid) {
+	if (!au_localisation_settings.has_abn_lookup_guid) {
 		frappe.msgprint(
 			__(
 				"Please enter GUID in <a href='/desk/au-localisation-settings/' target='_blank'>AU Localisation Settings</a>."
@@ -53,11 +51,13 @@ au_localisation.abn.handle_blur = function (frm) {
 	frappe
 		.call({
 			method: "erpnext_australian_localisation.overrides.abn_verification.fetch_and_update_abn",
-			args: { tax_id, guid },
+			args: { tax_id },
 			freeze: true,
 			freeze_message: __("Validating Tax ID...")
 		})
 		.then((r) => {
+			if (!frm.doc.is_verify_abn || tax_id !== (frm.doc.tax_id || "").replace(/ /g, ""))
+				return;
 			const data = r.message;
 
 			if (data.success) {

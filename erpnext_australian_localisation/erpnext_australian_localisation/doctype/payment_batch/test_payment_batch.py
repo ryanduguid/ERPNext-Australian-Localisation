@@ -18,6 +18,7 @@ from erpnext_australian_localisation.erpnext_australian_localisation.doctype.pay
 class TestPaymentBatch(TestCase):
 	def setUp(self):
 		self.bank = frappe._dict(
+			currency="AUD",
 			company="Synthetic Company",
 			apca_number="000000",
 			bank_account_no="111111111",
@@ -36,6 +37,7 @@ class TestPaymentBatch(TestCase):
 			amount=12.34,
 		)
 		self.batch = frappe._dict(
+			currency="AUD",
 			bank_account="Synthetic Bank",
 			posting_date="2026-09-10",
 			total_paid_amount=12.34,
@@ -73,7 +75,7 @@ class TestPaymentBatch(TestCase):
 				account.bank_account_no = original
 
 	def test_aba_refuses_invalid_or_overflowing_amounts(self):
-		for amount in (0, -1, 0.001, 100000000, float("inf"), float("nan"), "invalid"):
+		for amount in (0, -1, 0.001, 12.345, 100000000, float("inf"), float("nan"), "invalid"):
 			with self.subTest(amount=amount):
 				self.row.amount = self.batch.total_paid_amount = amount
 				with self.assertRaises(frappe.ValidationError):
@@ -152,7 +154,8 @@ class TestPaymentBatch(TestCase):
 		connection.execute(
 			"CREATE TABLE `tabPayment Entry` (name, party_name, base_paid_amount, docstatus, party_type, company, paid_from, owner)"
 		)
-		connection.execute("CREATE TABLE `tabPayment Batch Item` (payment_entry, party_name, amount)")
+		connection.execute("CREATE TABLE `tabPayment Batch Item` (payment_entry, party_name, amount, parent)")
+		connection.execute("CREATE TABLE `tabPayment Batch` (name, docstatus)")
 		valid = [
 			"allowed",
 			"Supplier",
@@ -200,6 +203,55 @@ class TestPaymentBatch(TestCase):
 			20,
 			{"bank_account": "Synthetic Bank", "company": "Synthetic Company", "party_type": "Supplier"},
 		)
+
+	def test_payment_lookup_excludes_active_batches_by_id_and_keeps_cancelled_batches(self):
+		connection = sqlite3.connect(":memory:")
+		self.addCleanup(connection.close)
+		connection.execute(
+			"CREATE TABLE `tabPayment Entry` (name, party_name, base_paid_amount, docstatus, party_type, company, paid_from)"
+		)
+		connection.execute("CREATE TABLE `tabPayment Batch Item` (payment_entry, party_name, amount, parent)")
+		connection.execute("CREATE TABLE `tabPayment Batch` (name, docstatus)")
+		for name in ("active", "cancelled", "free"):
+			connection.execute(
+				"INSERT INTO `tabPayment Entry` VALUES (?, 'Renamed Supplier', 20, 0, 'Supplier', 'Synthetic Company', 'Synthetic Account')",
+				(name,),
+			)
+		connection.executemany("INSERT INTO `tabPayment Batch` VALUES (?, ?)", [("b1", 1), ("b2", 2)])
+		connection.executemany(
+			"INSERT INTO `tabPayment Batch Item` VALUES (?, 'Old Supplier', 10, ?)",
+			[("active", "b1"), ("cancelled", "b2")],
+		)
+
+		def execute(query, parameters, **kwargs):
+			return connection.execute(re.sub(r"%\((\w+)\)s", r":\1", query), parameters).fetchall()
+
+		with (
+			patch.object(
+				frappe, "get_doc", return_value=Mock(company="Synthetic Company", account="Synthetic Account")
+			),
+			patch.object(payment_batch, "get_match_cond", return_value=""),
+			patch.object(frappe.db, "sql", side_effect=execute),
+		):
+			self.assertEqual([row[0] for row in self.lookup()], ["cancelled", "free"])
+
+	def test_generated_attachment_is_scoped_to_its_batch(self):
+		batch = Mock(file_format="ABA", bank_file_url="old")
+		batch.name = "Synthetic Batch"
+		file = Mock(file_url="new")
+		with (
+			patch.object(payment_batch, "generate_aba_file", return_value="synthetic-content"),
+			patch.object(frappe.db, "exists", return_value="Previous File") as exists,
+			patch.object(frappe, "delete_doc"),
+			patch.object(frappe, "get_doc", return_value=file) as create,
+			patch.object(frappe.db, "commit") as commit,
+		):
+			self.assertEqual(payment_batch.PaymentBatch.generate_bank_file(batch), "new")
+			self.assertEqual(exists.call_args.args[1]["attached_to_name"], batch.name)
+			self.assertEqual(create.call_args.args[0]["attached_to_doctype"], "Payment Batch")
+			self.assertEqual(create.call_args.args[0]["attached_to_name"], batch.name)
+			self.assertEqual(create.call_args.args[0]["is_private"], 1)
+			commit.assert_not_called()
 
 	def test_missing_email_lookup_checks_parent_permission(self):
 		doc = Mock()

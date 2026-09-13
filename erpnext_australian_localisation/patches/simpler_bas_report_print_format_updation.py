@@ -33,19 +33,15 @@ def execute():
 		{"options": "-None-\nABA", "default": "-None-"},
 	)
 
-	try:
-		frappe.db.sql(
-			"""
-				DELETE FROM `tabAU BAS Entry`
-				WHERE voucher_type = 'POS Invoice'
-			"""
-		)
-		delete_custom_field(POS_INVOICE_CUSTOM_FIELDS)
-
-	except Exception:
-		pass
-
-	try:
-		frappe.rename_doc("Print Format", "AU BAS Report Format", "AU Full BAS Report Format")
-	except Exception:
-		frappe.logger().info("Print Format already renamed")
+	frappe.db.sql(
+		"""
+			DELETE FROM `tabAU BAS Entry`
+			WHERE voucher_type = 'POS Invoice'
+		"""
+	)
+	delete_custom_field(POS_INVOICE_CUSTOM_FIELDS)
+	if not frappe.db.exists("Print Format", "AU BAS Report Format") and frappe.db.exists(
+		"Print Format", "AU Full BAS Report Format"
+	):
+		return
+	frappe.rename_doc("Print Format", "AU BAS Report Format", "AU Full BAS Report Format")

@@ -26,14 +26,18 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Reporting Period",
-   "options": "Monthly\nQuarterly"
+   "options": "Monthly\nQuarterly",
+   "reqd": 1,
+   "default": "Monthly"
   },
   {
    "fieldname": "reporting_method",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Reporting Method",
-   "options": "Full reporting method\nSimpler BAS reporting method"
+   "options": "Full reporting method\nSimpler BAS reporting method",
+   "reqd": 1,
+   "default": "Simpler BAS reporting method"
   }
  ],
  "grid_page_length": 50,

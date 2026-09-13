@@ -15,7 +15,7 @@ env:
   BRANCH: ${{ github.base_ref || github.ref_name }}
 
 concurrency:
-  group: develop-erpnext_australian_localisation-${{ github.event.number }}
+  group: develop-erpnext_australian_localisation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

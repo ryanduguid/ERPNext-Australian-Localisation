@@ -74,6 +74,8 @@ def on_update(doc, event):
 
 def update_aulocalisation_settings(company):
 	au_localisation_settings = frappe.get_cached_doc("AU Localisation Settings")
+	if any(row.company == company for row in au_localisation_settings.bas_reporting_period):
+		return
 	row = frappe.new_doc("AU BAS Reporting Period")
 	row.update(
 		{

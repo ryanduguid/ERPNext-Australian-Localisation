@@ -45,6 +45,8 @@ frappe.ui.form.on("Bank Statement Import", {
 					frm.set_df_property("bs_download_template", "hidden", 0);
 				} else {
 					// If no format is set
+					frm.set_df_property("download_template", "hidden", 0);
+					frm.set_df_property("bs_download_template", "hidden", 1);
 					frm.set_df_property("google_sheets_url", "hidden", 0);
 					frm.set_df_property("import_file", "hidden", 0);
 					frm.set_df_property("html_5", "hidden", 0);

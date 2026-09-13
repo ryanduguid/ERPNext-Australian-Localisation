@@ -30,6 +30,6 @@
   }
  ],
  "subtitle": "BAS report, ABA payment file, BAI2 Bank Statement import and more",
- "success_message": "BAS report will be released in the next version",
+ "success_message": "Australian localisation is configured. The BAS Report is available.",
  "title": "Australian Localisation"
 }
