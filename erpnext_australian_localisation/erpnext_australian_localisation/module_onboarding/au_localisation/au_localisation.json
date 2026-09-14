@@ -29,7 +29,7 @@
    "step": "Payment Batch (ABA File)"
   }
  ],
- "subtitle": "BAS report, ABA payment file, BAI2 Bank Statement import and more",
+ "subtitle": "BAS report, ABA payment file, CSV bank statement import and more",
  "success_message": "Australian localisation is configured. The BAS Report is available.",
  "title": "Australian Localisation"
 }
