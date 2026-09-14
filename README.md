@@ -27,6 +27,10 @@ bench install-app erpnext_australian_localisation
 
 <img width="1885" height="866" alt="Readme Up1" src="https://github.com/user-attachments/assets/61e43643-ac7a-4b03-9b52-c85172cca16d" />
 
+This historical workspace image shows the earlier BAI2 label. The current
+onboarding and bank statement importer support CSV files with the selected
+bank format's required headings. BAI2 numbered-record files are unsupported.
+
 ### Features
 
 - BAS Report can be generated based on either Simpler or Full reporting method
