@@ -212,6 +212,10 @@ def update_tax_code_for_tax(tax, tax_template):
 
 
 def on_cancel(doc, event):
-	bas_entries = frappe.get_list("AU BAS Entry", filters={"voucher_no": doc.name}, pluck="name")
+	bas_entries = frappe.get_list(
+		"AU BAS Entry",
+		filters={"voucher_type": doc.doctype, "voucher_no": doc.name, "company": doc.company},
+		pluck="name",
+	)
 	for bas_entry in bas_entries:
 		frappe.delete_doc("AU BAS Entry", bas_entry, ignore_permissions=True)

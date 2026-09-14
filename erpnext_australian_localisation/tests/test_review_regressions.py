@@ -30,6 +30,46 @@ from erpnext_australian_localisation.overrides import bank_statement_import, pay
 
 
 class TestReviewRegressions(TestCase):
+	def test_bank_dates_preserve_iso_and_australian_order(self):
+		for value, expected in [
+			("2025-01-02", "2025-01-02"),
+			("2025-02-01", "2025-02-01"),
+			("2025-01-02T14:30:00Z", "2025-01-02"),
+			("2025-02-01 14:30:00", "2025-02-01"),
+			("20250102", "2025-01-02"),
+			("02/01/2025", "2025-01-02"),
+			("02-Jan-25", "2025-01-02"),
+			("2024-02-29", "2024-02-29"),
+		]:
+			with self.subTest(value=value):
+				self.assertEqual(bank_statement_import.normalize_date(value, 2), expected)
+		for value in ("2025-02-29", "2025-13-01", "", "not a date"):
+			with self.subTest(value=value), self.assertRaisesRegex(frappe.ValidationError, "row 2"):
+				bank_statement_import.normalize_date(value, 2)
+
+	def test_westpac_requires_matching_bsb_and_account(self):
+		format_doc = frappe._dict(name="Westpac CSV Format", acc_no_col="Account")
+		with patch.object(frappe.db, "get_value", return_value=("123456", "111-222")):
+			for value in ("111222123456", "111-222-123456"):
+				with self.subTest(value=value):
+					bank_statement_import.validate_account_and_branch(
+						iter([{"Account": value}]), format_doc, "Synthetic"
+					)
+			for value in ("999999123456", "111222654321", "0111222123456", "123456"):
+				with self.subTest(value=value), self.assertRaises(frappe.ValidationError):
+					bank_statement_import.validate_account_and_branch(
+						iter([{"Account": value}]), format_doc, "Synthetic"
+					)
+		for account, bsb in [("123456", None), (None, "111-222")]:
+			with (
+				self.subTest(account=account, bsb=bsb),
+				patch.object(frappe.db, "get_value", return_value=(account, bsb)),
+				self.assertRaisesRegex(frappe.ValidationError, "set Bank Account Number and BSB"),
+			):
+				bank_statement_import.validate_account_and_branch(
+					iter([{"Account": "111222123456"}]), format_doc, "Synthetic"
+				)
+
 	def test_aba_rejects_fractional_cents_without_rounding(self):
 		for amount in ("0.001", "12.345", "99999999.999"):
 			with self.subTest(amount=amount), self.assertRaises(frappe.ValidationError):

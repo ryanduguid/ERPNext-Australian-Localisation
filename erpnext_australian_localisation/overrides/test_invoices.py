@@ -25,6 +25,38 @@ class Row(dict):
 		self.setdefault(field, []).append(value)
 
 
+class TestBASCancellation(TestCase):
+	def test_cancellation_keeps_other_document_types_companies_and_vouchers(self):
+		rows = [
+			Row(name="sale-1", voucher_type="Sales Invoice", voucher_no="SHARED-001", company="Example"),
+			Row(name="sale-2", voucher_type="Sales Invoice", voucher_no="SHARED-001", company="Example"),
+			Row(name="purchase", voucher_type="Purchase Invoice", voucher_no="SHARED-001", company="Example"),
+			Row(name="claim", voucher_type="Expense Claim", voucher_no="SHARED-001", company="Example"),
+			Row(name="other-company", voucher_type="Sales Invoice", voucher_no="SHARED-001", company="Other"),
+			Row(
+				name="other-voucher", voucher_type="Sales Invoice", voucher_no="OTHER-001", company="Example"
+			),
+		]
+
+		def matching(doctype, filters, pluck):
+			self.assertEqual(doctype, "AU BAS Entry")
+			self.assertEqual(pluck, "name")
+			return [row.name for row in rows if all(row[key] == value for key, value in filters.items())]
+
+		for doctype, expected in [
+			("Sales Invoice", ["sale-1", "sale-2"]),
+			("Purchase Invoice", ["purchase"]),
+			("Expense Claim", ["claim"]),
+		]:
+			with (
+				self.subTest(doctype=doctype),
+				patch.object(frappe, "get_list", side_effect=matching),
+				patch.object(frappe, "delete_doc") as delete,
+			):
+				invoices.on_cancel(Row(doctype=doctype, name="SHARED-001", company="Example"), "on_cancel")
+				self.assertEqual([call.args[1] for call in delete.call_args_list], expected)
+
+
 class TestPurchaseGSTEligibility(TestCase):
 	def purchase(self, items, tax_amount=100, detail=None, add_deduct_tax="Add"):
 		doc = SimpleNamespace(

@@ -203,8 +203,10 @@ def normalize_date(value, row_no=None):
 		#  Handles YYYYMMDD (20250102)
 		if value.isdigit() and len(value) == 8:
 			dt = datetime.strptime(value, "%Y%m%d")
+		elif re.match(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])", value):
+			dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
 		else:
-			# Handles: 01/01/2025, 01-Jan-25, 2025-01-02, etc
+			# Australian day-first forms, such as 02/01/2025 and 02-Jan-25.
 			dt = parse(value, dayfirst=True)
 
 		return dt.strftime("%Y-%m-%d")
@@ -260,11 +262,12 @@ def validate_account_and_branch(reader, format_doc, bank_account):
 					throw_mismatch(expected, raw_val if branch_code else result_acc_no)
 
 		elif format_doc.name == "Westpac CSV Format":
-			# contains BSB (6 digits) + account number concatenated
-			if bank_acc_no and not raw_val.endswith(bank_acc_no):
-				throw_mismatch(bank_acc_no, raw_val)
-			else:
-				continue
+			# The statement combines the BSB and account number.
+			if not bank_acc_no or not branch_code:
+				frappe.throw(_("Please set Bank Account Number and BSB in Bank Account for Westpac imports."))
+			expected = f"{branch_code}{bank_acc_no}".replace("-", "")
+			if raw_val.replace("-", "") != expected:
+				throw_mismatch(expected, raw_val)
 
 		elif bank_acc_no and raw_val != bank_acc_no:
 			throw_mismatch(bank_acc_no, raw_val)
