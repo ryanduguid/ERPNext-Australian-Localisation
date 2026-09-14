@@ -245,6 +245,10 @@ EMPLOYEE_BANK_DETAILS = {
 		},
 	]
 }
+# These fields drive the CSV bank statement import, which maps a bank's own
+# column layout through AU Bank Statement Format. The app parses no BAI2 file;
+# the constant name predates that import and is kept only to avoid renaming a
+# published symbol.
 BAI2_FIELDS = {
 	"Bank Account": [
 		{
