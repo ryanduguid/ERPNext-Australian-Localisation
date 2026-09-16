@@ -1,0 +1,33 @@
+name: No AI attribution
+
+# Fails a pull request that carries AI authorship credit in its description, in
+# a commit message, or in a commit's author or committer identity.
+# Product references are allowed.
+#
+# This repository is a contribution fork. The guard runs on pull requests
+# opened here and on manual dispatch only. There is deliberately no push
+# trigger: a push of commits synced from upstream would be scanned, and this
+# fork neither owns nor may rewrite upstream authorship. The shared runner
+# scans only the pull request commit range, so upstream history stays out of
+# the result. It never runs pull request code.
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attribution-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: Attribution policy
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    uses: ryanduguid/release-policy/.github/workflows/attribution-policy.yml@df96fdf2d6c7669c75d50331fd5543058e2785e8
