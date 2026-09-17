@@ -7,9 +7,11 @@ name: No AI attribution
 # This repository is a contribution fork. The guard runs on pull requests
 # opened here and on manual dispatch only. There is deliberately no push
 # trigger: a push of commits synced from upstream would be scanned, and this
-# fork neither owns nor may rewrite upstream authorship. The shared runner
-# scans only the pull request commit range, so upstream history stays out of
-# the result. It never runs pull request code.
+# fork neither owns nor may rewrite upstream authorship. On a pull request the
+# shared runner scans only that pull request's commit range, so upstream
+# history stays out of the result. A manual run carries no pull request, so the
+# runner audits the selected ref in full: with no push trigger here, that is
+# the only on-demand check this fork has. It never runs pull request code.
 
 on:
   pull_request_target:
