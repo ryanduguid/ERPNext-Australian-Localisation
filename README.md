@@ -1,5 +1,10 @@
 ## ERPNext Australian Localisation :
 
+**Fork status**
+
+[![Fork code quality](https://app.codacy.com/project/badge/Grade/2201150c47ad4f2db63eecf4a7acfe7a?branch=develop)](https://app.codacy.com/gh/ryanduguid/ERPNext-Australian-Localisation/dashboard)
+[![Fork CI](https://github.com/ryanduguid/ERPNext-Australian-Localisation/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/ryanduguid/ERPNext-Australian-Localisation/actions/workflows/ci.yml)
+
 The ERPNext Australian Localisation app will install the necessary localisation functionalities for Australian business in ERPNext. This app works in line with the Australian Chart of Accounts. The features of this app are as follows:
 
 1. Assist the Australian companies to get the GST postings based on the Supplier and Customer type (Local / International / Capital Goods / Non Capital Goods).
