@@ -1,4 +1,3 @@
-import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import make_records
 
 
