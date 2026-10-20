@@ -2,8 +2,8 @@
 
 **Fork status**
 
-[![Fork code quality](https://app.codacy.com/project/badge/Grade/2201150c47ad4f2db63eecf4a7acfe7a?branch=develop)](https://app.codacy.com/gh/ryanduguid/ERPNext-Australian-Localisation/dashboard)
-[![Fork CI](https://github.com/ryanduguid/ERPNext-Australian-Localisation/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/ryanduguid/ERPNext-Australian-Localisation/actions/workflows/ci.yml)
+[![Fork code quality](https://img.shields.io/codacy/grade/2201150c47ad4f2db63eecf4a7acfe7a/develop?style=flat&labelColor=000000)](https://app.codacy.com/gh/ryanduguid/ERPNext-Australian-Localisation/dashboard)
+[![Fork CI](https://img.shields.io/github/actions/workflow/status/ryanduguid/ERPNext-Australian-Localisation/ci.yml?branch=develop&label=CI&style=flat&labelColor=000000)](https://github.com/ryanduguid/ERPNext-Australian-Localisation/actions/workflows/ci.yml)
 
 The ERPNext Australian Localisation app will install the necessary localisation functionalities for Australian business in ERPNext. This app works in line with the Australian Chart of Accounts. The features of this app are as follows:
 
