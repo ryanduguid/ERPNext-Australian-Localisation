@@ -67,6 +67,7 @@ doctype_js = {
 	"Purchase Receipt": "public/js/setup_input_taxed_sales.js",
 	"Supplier": "public/js/supplier.js",
 	"Customer": "public/js/customer.js",
+	"Employee": "public/js/employee.js",
 	"Bank Statement Import": "public/js/bank_statement_import.js",
 	"Payment Entry": "public/js/payment_entry.js",
 }
@@ -190,6 +191,7 @@ doc_events = {
 	"Company": {
 		"after_insert": "erpnext_australian_localisation.overrides.company.after_insert",
 		"on_update": "erpnext_australian_localisation.overrides.company.on_update",
+		"on_trash": "erpnext_australian_localisation.overrides.company.on_trash",
 	},
 	"Expense Claim": {
 		"before_submit": "erpnext_australian_localisation.overrides.expense_claim.before_submit",

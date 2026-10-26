@@ -260,3 +260,11 @@ class TestPaymentBatch(TestCase):
 			with self.assertRaises(frappe.PermissionError):
 				payment_batch.get_missing_email_suppliers("Synthetic Batch")
 			rows.assert_not_called()
+
+	def test_aba_account_field_pads_to_nine(self):
+		self.assertEqual(aba_file_generator.aba_account_field("123456", "Supplier S-0001"), "   123456")
+		self.assertEqual(aba_file_generator.aba_account_field("123456789", "Supplier S-0001"), "123456789")
+
+	def test_aba_account_field_refuses_ten_digits(self):
+		with self.assertRaises(frappe.ValidationError):
+			aba_file_generator.aba_account_field("1234567890", "Supplier S-0001")
