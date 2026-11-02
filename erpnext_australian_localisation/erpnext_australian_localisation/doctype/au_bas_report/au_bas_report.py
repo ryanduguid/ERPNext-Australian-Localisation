@@ -7,9 +7,19 @@ from datetime import datetime, timezone
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
+
+from erpnext_australian_localisation.overrides.invoices import EXCLUDED_PURCHASE_CODES
+
+BAS_LABEL_FIELDS = (*(f"g{n}" for n in range(1, 21)), "1a", "1b")
 
 
 class AUBASReport(Document):
+	def validate(self):
+		if self.reporting_status == "Validated":
+			validate_no_negative_labels(self)
+			validate_single_adjustment_label(self)
+
 	def before_submit(self):
 		validate_reporting_scope(self)
 		if self.get("bas_currency") != "AUD":
@@ -47,13 +57,37 @@ def validate_reporting_scope(doc):
 		{
 			"company": doc.company,
 			"date": ["between", [doc.start_date, doc.end_date]],
-			"tax_code": ["in", ["AUPPVTUSE", "AUPINPTAX"]],
+			"tax_code": ["in", sorted(EXCLUDED_PURCHASE_CODES)],
 		},
 	):
 		frappe.throw(
 			_(
 				"This period contains private or input-taxed purchases. Simpler BAS ledger totals cannot "
 				"apply their item exclusions. Reconcile the purchase entries and use the full reporting method."
+			)
+		)
+
+
+def validate_no_negative_labels(doc):
+	negative = [label.upper() for label in BAS_LABEL_FIELDS if flt(doc.get(label)) < 0]
+	if negative:
+		frappe.throw(
+			_(
+				"BAS labels cannot be negative: {0}. Report an overall increasing adjustment at G7 or an "
+				"overall decreasing adjustment at G18, and correct the entries behind any other negative "
+				"label before validating."
+			).format(", ".join(negative))
+		)
+
+
+def validate_single_adjustment_label(doc):
+	# The ATO's adjustments worksheet nets increasing against decreasing adjustments.
+	if flt(doc.get("g7")) and flt(doc.get("g18")):
+		frappe.throw(
+			_(
+				"Enter an amount at G7 or G18, not both. Net the period's increasing and decreasing "
+				"adjustments: report the difference at G7 if increasing adjustments are larger, or at G18 if "
+				"decreasing adjustments are larger."
 			)
 		)
 

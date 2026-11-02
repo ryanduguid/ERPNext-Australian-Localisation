@@ -65,6 +65,16 @@ def get_au_tax_codes():
 			"tax_code": "AUPPVTUSE",
 			"tax_description": "Purchases for private use / not income tax deductible",
 		},
+		{
+			"doctype": "AU Tax Code",
+			"tax_code": "AUPCAINPTAX",
+			"tax_description": "Capital Purchase for Input Tax Sales",
+		},
+		{
+			"doctype": "AU Tax Code",
+			"tax_code": "AUPCAPVTUSE",
+			"tax_description": "Capital Purchase for private use / not income tax deductible",
+		},
 	]
 	return records
 
@@ -383,6 +393,34 @@ def get_au_bas_label_setup():
 			"tax_management": "Subjected",
 			"tax_allocation": "Deductible Purchase",
 			"tax_code": "AUPPVTUSE",
+		},
+		{
+			"doctype": "AU BAS Label Setup",
+			"bas_label": "G10",
+			"tax_management": "Subjected",
+			"tax_allocation": "Deductible Purchase",
+			"tax_code": "AUPCAINPTAX",
+		},
+		{
+			"doctype": "AU BAS Label Setup",
+			"bas_label": "G13",
+			"tax_management": "Subjected",
+			"tax_allocation": "Deductible Purchase",
+			"tax_code": "AUPCAINPTAX",
+		},
+		{
+			"doctype": "AU BAS Label Setup",
+			"bas_label": "G10",
+			"tax_management": "Subjected",
+			"tax_allocation": "Deductible Purchase",
+			"tax_code": "AUPCAPVTUSE",
+		},
+		{
+			"doctype": "AU BAS Label Setup",
+			"bas_label": "G15",
+			"tax_management": "Subjected",
+			"tax_allocation": "Deductible Purchase",
+			"tax_code": "AUPCAPVTUSE",
 		},
 	]
 	return records

@@ -58,13 +58,13 @@ class TestBASCancellation(TestCase):
 
 
 class TestPurchaseGSTEligibility(TestCase):
-	def purchase(self, items, tax_amount=100, detail=None, add_deduct_tax="Add"):
+	def purchase(self, items, tax_amount=100, detail=None, add_deduct_tax="Add", template="GST"):
 		doc = SimpleNamespace(
 			doctype="Purchase Invoice",
 			name="EXAMPLE-1",
 			company="Example",
 			posting_date="2026-07-01",
-			taxes_and_charges="GST",
+			taxes_and_charges=template,
 			conversion_rate=1.5,
 			items=[Row(expense_account="Expense", **item) for item in items],
 			taxes=[
@@ -104,7 +104,10 @@ class TestPurchaseGSTEligibility(TestCase):
 			if doctype in ("Item Tax Template", "Purchase Taxes and Charges Template"):
 				return filters
 			if doctype == "AU Tax Determination":
-				return "AUPNCAFR" if filters.get("item_tax_template") == "GST-free" else "AUPNCASGT"
+				gst_free = filters.get("item_tax_template") == "GST-free"
+				if filters.get("bp_tax_template") == "Capital":
+					return "AUPCAFREX" if gst_free else "AUPCAGST"
+				return "AUPNCAFR" if gst_free else "AUPNCASGT"
 			raise AssertionError(doctype)
 
 		def labels(doctype, filters, fields):
@@ -174,6 +177,23 @@ class TestPurchaseGSTEligibility(TestCase):
 				self.assertEqual(totals.get("1B", 0), 0)
 				self.assertEqual(totals["G11"], 1100)
 				self.assertEqual(totals[label], 1100)
+
+	def test_private_and_input_taxed_capital_purchases_stay_at_g10(self):
+		for flag, label in [("private_use", "G15"), ("input_taxed", "G13")]:
+			for item_template in ("", "GST-free"):
+				with self.subTest(flag=flag, item_template=item_template):
+					totals = self.purchase(
+						[
+							{
+								"item_code": "A",
+								"base_net_amount": 1000,
+								"item_tax_template": item_template,
+								flag: 1,
+							}
+						],
+						template="Capital",
+					)
+					self.assertEqual(totals, {"G10": 1100, label: 1100})
 
 	def test_ordinary_purchase_keeps_its_credit(self):
 		self.assertEqual(
