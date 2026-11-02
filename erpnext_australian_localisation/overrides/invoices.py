@@ -3,6 +3,10 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 import frappe
 import pandas as pd
 
+# Purchases whose GST is not creditable; their GST forms part of the G13 or G15 exclusion.
+EXCLUDED_PURCHASE_CODES = {"AUPINPTAX", "AUPPVTUSE", "AUPCAINPTAX", "AUPCAPVTUSE"}
+CAPITAL_PURCHASE_CODES = {"AUPCAGST", "AUPCAFREX"}
+
 
 def before_submit(doc, event):
 	if doc.taxes_and_charges:
@@ -49,7 +53,7 @@ def before_submit(doc, event):
 				allocations = get_purchase_tax_allocations(doc, tax)
 			for tax_code, amount in allocations:
 				# Excluded GST forms part of the purchase and its G13/G15 exclusion.
-				management = "Subjected" if tax_code in {"AUPPVTUSE", "AUPINPTAX"} else tax_management
+				management = "Subjected" if tax_code in EXCLUDED_PURCHASE_CODES else tax_management
 				result.extend(
 					generate_bas_labels(
 						management, tax_allocation, tax_code, tax.account_head, amount, sum_depends_on[1]
@@ -66,7 +70,7 @@ def get_purchase_tax_allocations(doc, tax):
 	if tax.get("add_deduct_tax") == "Deduct":
 		total = -total
 	codes = {item.au_tax_code for item in doc.items}
-	if not codes & {"AUPPVTUSE", "AUPINPTAX"}:
+	if not codes & EXCLUDED_PURCHASE_CODES:
 		return [(tax.au_tax_code, float(total))]
 	if len(codes) == 1:
 		return [(next(iter(codes)), float(total))]
@@ -176,12 +180,13 @@ def update_tax_code_for_sales_invoice_item(items, tax_template):
 # update au_tax_code for Purchase Invoice Items
 def update_tax_code_for_purchase_invoice_item(items, tax_template):
 	for item in items:
+		update_tax_code_for_item(item, tax_template)
+		# A capital purchase stays at G10 when its use excludes it at G13 or G15.
+		capital = item.au_tax_code in CAPITAL_PURCHASE_CODES
 		if item.input_taxed:
-			item.au_tax_code = "AUPINPTAX"
+			item.au_tax_code = "AUPCAINPTAX" if capital else "AUPINPTAX"
 		elif item.private_use:
-			item.au_tax_code = "AUPPVTUSE"
-		else:
-			update_tax_code_for_item(item, tax_template)
+			item.au_tax_code = "AUPCAPVTUSE" if capital else "AUPPVTUSE"
 
 
 def update_tax_code_for_item(item, tax_template):

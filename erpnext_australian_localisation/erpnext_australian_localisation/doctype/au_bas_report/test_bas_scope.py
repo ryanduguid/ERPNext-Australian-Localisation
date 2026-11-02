@@ -192,3 +192,15 @@ class TestBASScope(TestCase):
 			self.assertRaises(frappe.ValidationError),
 		):
 			bas.update_full_bas_report(doc)
+
+	def test_validated_report_refuses_negative_labels(self):
+		labels = {"1a": 0, "1b": 0, **{f"g{i}": 0 for i in range(1, 21)}}
+		for label in labels:
+			with self.subTest(label=label):
+				doc = Record(**labels, reporting_status="Validated")
+				doc[label] = -1
+				with self.assertRaises(frappe.ValidationError):
+					bas.AUBASReport.validate(doc)
+				doc.reporting_status = "In Review"
+				bas.AUBASReport.validate(doc)
+		bas.AUBASReport.validate(Record({**labels, "g1": 1100, "g18": 110, "reporting_status": "Validated"}))
