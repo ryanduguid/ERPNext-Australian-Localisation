@@ -159,6 +159,7 @@ def update_full_bas_report(doc):
 		"g8",
 		"g9",
 		"g12",
+		"g16",
 		"g17",
 		"g18",
 		"g19",
