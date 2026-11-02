@@ -60,18 +60,19 @@ frappe.ui.form.on("AU BAS Report", {
 
 	g7(frm) {
 		// The ATO reports every BAS label in whole dollars, rounded down, as the server does.
-		frm.set_value("g8", Math.floor(frm.doc.g6 + frm.doc.g7));
+		// flt treats an amount the BAS generation has not set yet as 0, not NaN.
+		frm.set_value("g8", Math.floor(flt(frm.doc.g6) + flt(frm.doc.g7)));
 		frm.set_value("g9", Math.floor(frm.doc.g8 / 11));
-		frm.set_value("1a", Math.floor(frm.doc._1a_only + frm.doc.g7 / 11));
-		frm.set_value("net_gst", Math.abs(frm.doc["1a"] - frm.doc["1b"]));
+		frm.set_value("1a", Math.floor(flt(frm.doc._1a_only) + flt(frm.doc.g7) / 11));
+		frm.set_value("net_gst", Math.abs(frm.doc["1a"] - flt(frm.doc["1b"])));
 		frm.trigger("update_label");
 	},
 
 	g18(frm) {
-		frm.set_value("g19", Math.floor(frm.doc.g17 + frm.doc.g18));
+		frm.set_value("g19", Math.floor(flt(frm.doc.g17) + flt(frm.doc.g18)));
 		frm.set_value("g20", Math.floor(frm.doc.g19 / 11));
-		frm.set_value("1b", Math.floor(frm.doc._1b_only + frm.doc.g18 / 11));
-		frm.set_value("net_gst", Math.abs(frm.doc["1a"] - frm.doc["1b"]));
+		frm.set_value("1b", Math.floor(flt(frm.doc._1b_only) + flt(frm.doc.g18) / 11));
+		frm.set_value("net_gst", Math.abs(flt(frm.doc["1a"]) - frm.doc["1b"]));
 		frm.trigger("update_label");
 	},
 
