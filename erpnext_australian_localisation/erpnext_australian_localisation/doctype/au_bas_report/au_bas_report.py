@@ -18,6 +18,7 @@ class AUBASReport(Document):
 	def validate(self):
 		if self.reporting_status == "Validated":
 			validate_no_negative_labels(self)
+			validate_single_adjustment_label(self)
 
 	def before_submit(self):
 		validate_reporting_scope(self)
@@ -76,6 +77,18 @@ def validate_no_negative_labels(doc):
 				"overall decreasing adjustment at G18, and correct the entries behind any other negative "
 				"label before validating."
 			).format(", ".join(negative))
+		)
+
+
+def validate_single_adjustment_label(doc):
+	# The ATO's adjustments worksheet nets increasing against decreasing adjustments.
+	if flt(doc.get("g7")) and flt(doc.get("g18")):
+		frappe.throw(
+			_(
+				"Enter an amount at G7 or G18, not both. Net the period's increasing and decreasing "
+				"adjustments: report the difference at G7 if increasing adjustments are larger, or at G18 if "
+				"decreasing adjustments are larger."
+			)
 		)
 
 

@@ -204,3 +204,14 @@ class TestBASScope(TestCase):
 				doc.reporting_status = "In Review"
 				bas.AUBASReport.validate(doc)
 		bas.AUBASReport.validate(Record({**labels, "g1": 1100, "g18": 110, "reporting_status": "Validated"}))
+
+	def test_validated_report_refuses_adjustments_at_both_g7_and_g18(self):
+		labels = {"1a": 0, "1b": 0, **{f"g{i}": 0 for i in range(1, 21)}}
+		doc = Record({**labels, "g7": 220, "g18": 110, "reporting_status": "Validated"})
+		with self.assertRaises(frappe.ValidationError):
+			bas.AUBASReport.validate(doc)
+		doc.reporting_status = "In Review"
+		bas.AUBASReport.validate(doc)
+		for label in ("g7", "g18"):
+			with self.subTest(label=label):
+				bas.AUBASReport.validate(Record({**labels, label: 110, "reporting_status": "Validated"}))
