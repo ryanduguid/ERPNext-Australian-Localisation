@@ -8,6 +8,8 @@
 
 </div>
 
+ryanduguid/ERPNext-Australian-Localisation is [Ryan Duguid](https://duguid.com.au/)'s fork of [Arus-Info/ERPNext-Australian-Localisation](https://github.com/Arus-Info/ERPNext-Australian-Localisation), adding AUD provenance, BAS accounting-basis and label checks and validation of ABA and CSV bank imports for Australian ERPNext users who need those changes.
+
 GitHub Actions is off for this fork, so `ci.yml` does not run on GitHub. Run its steps locally before merging.
 
 The ERPNext Australian Localisation app will install the necessary localisation functionalities for Australian business in ERPNext. This app works in line with the Australian Chart of Accounts. The features of this app are as follows:
