@@ -12,6 +12,14 @@ ryanduguid/ERPNext-Australian-Localisation is [Ryan Duguid](https://duguid.com.a
 
 GitHub Actions is off for this fork, so `ci.yml` does not run on GitHub. Run its steps locally before merging.
 
+The Installation steps below fetch upstream's `version-16` branch, which lacks this fork's changes. To install the fork, get its `develop` branch on a Frappe and ERPNext version 16 bench (checked on 14 November 2026 with Frappe 16.55.2 and ERPNext 16.54.0):
+
+```bash
+cd $PATH_TO_YOUR_BENCH
+bench get-app https://github.com/ryanduguid/ERPNext-Australian-Localisation.git --branch develop
+bench --site <your-site> install-app erpnext_australian_localisation
+```
+
 The ERPNext Australian Localisation app will install the necessary localisation functionalities for Australian business in ERPNext. This app works in line with the Australian Chart of Accounts. The features of this app are as follows:
 
 1. Assist the Australian companies to get the GST postings based on the Supplier and Customer type (Local / International / Capital Goods / Non Capital Goods).
