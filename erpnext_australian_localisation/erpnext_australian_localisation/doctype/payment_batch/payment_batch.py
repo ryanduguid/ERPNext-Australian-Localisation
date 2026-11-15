@@ -98,7 +98,7 @@ def get_payment_entry(doctype: str, txt: str, searchfield: str, start: int, page
 		)
 		order by name
 		limit %(page_len)s offset %(start)s
-		""",
+		""",  # nosec B608  # only Frappe's permission clause is interpolated
 		filters,
 		as_dict=True,
 	)
